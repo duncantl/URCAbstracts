@@ -1,8 +1,31 @@
 if(FALSE) {
 
-    # Takes 10 seconds
+    # Takes 9-10 seconds
     f = "2024-abstract-book.xml"
     z = combinePages(getAbstracts2(f))
+
+    # For 2019 PDF/XML, need to read as latin1 rather than UTF8.
+    # Also, calling abstractPages() causes a memory limit error for the XPath.
+    # So specify these manually.
+
+    xml = list.files(pattern = "\\.xml$")
+    docs = lapply(xml, \(f) tryCatch(readPDFXML(f), error = function(...) readPDFXML(f, encoding = "latin1")))
+    system.time({ v = lapply(docs, \(f) try(combinePages(getAbstracts2(f))))})
+    names(v) = xml
+    v[[1]] = combinePages(getAbstracts2(docs[[1]], pages = doc1[52:233]))
+
+    abs = do.call(rbind, v)
+    rownames(abs) = NULL
+    abs$year = rep((2019:2025)[-4], sapply(v, nrow))
+
+    mp = c("Microbiology & Molec Gene" = "Microbiology & Molec Genetics",
+      "Molecular & Cellular Bio" = "Molecular & Cellular Biology",
+      "Land, Air and Water Resources" = "Land Air & Water Resources")
+    for(i in names(mp))
+        abs$dept[abs$dept == i] = mp[i]
+
+    # Check changed.
+    table(abs$dept %in% names(mp))
 }
 
 
@@ -45,6 +68,12 @@ if(FALSE) {
     # Anr Plant Sciences and Plant Sciences
     # Ag Molecular & Cellular Bio
     # Int Med Cardiology (sac) and Int Med Cardiology (davis)
+
+
+    #
+    # Microbiology & Molec Gene ->  Microbiology & Molec Genetics
+    # Molecular & Cellular Bio -> Molecular & Cellular Biology
+    # Land, Air and Water Resources -> "Land Air & Water Resources"
 }
 
 
@@ -190,10 +219,10 @@ function(doc)
 }
 
 getAbstracts2 =
-function(doc, fun = procAbstract, pages = doc[abstractPages(doc)], docFontInfo = getFontInfo(doc), ...)
+function(doc, fun = procAbstract, pages = doc[abstractPages(doc)], docFontInfo = getFontInfo(doc), encoding = "UTF8", ...)
 {
     if(is.character(doc))
-        doc = readPDFXML(doc, encoding = "UTF8", ...)
+        doc = readPDFXML(doc, encoding = encoding, ...)
 
     lapply(pages, getPageFontInfo, docFontInfo, fun = fun)
 }
@@ -209,15 +238,30 @@ function(x)
     ans
 }
 
+rmFooter =
+function(bb, lines)    
+{
+    bb = bb[ bb$top < max(lines$y1) , ]
+    i = grep("Annual Undergraduate Research, Scholarship and Creative Activities Conference", bb$text)
+    if(length(i))
+        bb = bb[ bb$top < min(bb$top[i]) - 5, ]
+
+    bb
+}
+
 getPageFontInfo =
 function(p, fontInfo, fun = procAbstract, bb = getBBox2(p, TRUE, attrs = c("left", "top", "font")), lines = getBBox(p, TRUE))
 {
-    bb = bb[ bb$top < max(lines$y1) , ]
+    bb = rmFooter(bb, lines)
 
-    col = split(bb, bb$left < midPoint(p))
+    if(nrow(bb) == 0)
+        return(NULL)
+
+    col = split(bb, bb$left >= midPoint(p))
     fi = fontInfo
-    bold = fi[fi$isBold | grepl("bold", fi$name, ignore.case = TRUE),]    
-    lapply(col, getColFontInfo, fun, bold, fontInfo)
+    bold = fi[fi$isBold | grepl("bold", fi$name, ignore.case = TRUE),]
+    pageNum = as.integer(xmlGetAttr(p, "number"))
+    lapply(1:length(col), \(i) getColFontInfo(col[[i]], fun, bold, fontInfo, column = i, page = pageNum))
 }
 
     # For each page, 
@@ -227,17 +271,17 @@ function(p, fontInfo, fun = procAbstract, bb = getBBox2(p, TRUE, attrs = c("left
     # department -
     # student name - line above Sponsor:     
 getColFontInfo =
-function(bb, fun, bold, fontInfo)
+function(bb, fun, bold, fontInfo, row = NA, column = NA, page = NA)
 {
     bb = bb[order(bb$top),]
     d = diff(bb$top)
     i = which.max(d)
-    abs = split(bb, 1:nrow(bb) <= i)
-    lapply(abs, getAbstractFontInfo, fun, bold, fontInfo)
+    abs = split(bb, 1:nrow(bb) > i)
+    lapply(1:2, function(i) getAbstractFontInfo(abs[[i]], row = i, column = column, page = page, fun, bold, fontInfo))
 }
 
 getAbstractFontInfo =
-function(bb, fun, bold, fontInfo)    
+function(bb, fun, bold, fontInfo, row = NA, column = NA, page = NA)    
 {
     if(length(bb$text[bb$text != " "]) == 0)
         return(NULL)
@@ -250,13 +294,16 @@ function(bb, fun, bold, fontInfo)
         student = bb2[[ i-1L ]],
         sponsor =  bb2[[ i ]],
         dept = bb2[[ i + 1L ]],
-        abstract = bb2[ (i+2L):length(bb2) ]
+        abstract = bb2[ (i+2L):length(bb2) ],
+        row = row,
+        column = column,
+        page = page
         )
          
 }
 
 procAbstract =
-function(title, student, sponsor, dept, abstract)
+function(title, student, sponsor, dept, abstract, row = NA, column = NA, page = NA)
 {
     as.data.frame(
         lapply(
@@ -264,7 +311,8 @@ function(title, student, sponsor, dept, abstract)
                  studentName = student,
                  sponsor = sponsor,
                  dept = dept,
-                 abstract = abstract),
+                 abstract = abstract,
+                 row = row, column = column, pageNum = page),
              
             combineText))
 }
