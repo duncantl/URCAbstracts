@@ -1,5 +1,13 @@
 if(FALSE) {
 
+    # Takes 10 seconds
+    f = "2024-abstract-book.xml"
+    z = combinePages(getAbstracts2(f))
+}
+
+
+if(FALSE) {
+
     xml = "25_URC_Abstract_Book_V2-1.xml"
     doc = readPDFXML(xml, encoding = "UTF8")
     pgs = doc[49:313]
@@ -156,8 +164,12 @@ function(bb, threshold = 2)
 combineText =
 function(bb)
 {
+    if(is.list(bb) && !is.data.frame(bb))
+        bb = do.call(rbind, bb)
+    
     if(is.data.frame(bb))
         bb = bb$text
+
     normalizeSpace( paste(bb, collapse = "") )
 }
 
@@ -177,24 +189,35 @@ function(doc)
     i[c(diff(i) == 1, TRUE)]
 }
 
-getAbsFontInfo =
-function(doc, pages = doc[abstractPages(doc)], docFontInfo = getFontInfo(doc))
+getAbstracts2 =
+function(doc, fun = procAbstract, pages = doc[abstractPages(doc)], docFontInfo = getFontInfo(doc), ...)
 {
     if(is.character(doc))
-        doc = readPDFXML(doc, ...)
+        doc = readPDFXML(doc, encoding = "UTF8", ...)
 
-    lapply(pages, getPageFontInfo)
+    lapply(pages, getPageFontInfo, docFontInfo, fun = fun)
+}
+
+combinePages =
+function(x)
+{
+    y = unlist(lapply(x, unlist, FALSE), FALSE)
+    ans = do.call(rbind, y)
+    tmp = ans$sponsor
+    ans$sponsor = cleanSponsorName(tmp)
+    ans$dept = cleanDeptName(ans$dept)
+    ans
 }
 
 getPageFontInfo =
-function(p, fontInfo, bb = getBBox2(p, TRUE, attrs = c("left", "top", "font")), lines = getBBox(p, TRUE))
+function(p, fontInfo, fun = procAbstract, bb = getBBox2(p, TRUE, attrs = c("left", "top", "font")), lines = getBBox(p, TRUE))
 {
     bb = bb[ bb$top < max(lines$y1) , ]
 
     col = split(bb, bb$left < midPoint(p))
     fi = fontInfo
     bold = fi[fi$isBold | grepl("bold", fi$name, ignore.case = TRUE),]    
-    lapply(col, getColFontInfo, bold, fontInfo)
+    lapply(col, getColFontInfo, fun, bold, fontInfo)
 }
 
     # For each page, 
@@ -204,29 +227,55 @@ function(p, fontInfo, bb = getBBox2(p, TRUE, attrs = c("left", "top", "font")), 
     # department -
     # student name - line above Sponsor:     
 getColFontInfo =
-function(bb, bold, fontInfo)
+function(bb, fun, bold, fontInfo)
 {
     bb = bb[order(bb$top),]
     d = diff(bb$top)
     i = which.max(d)
     abs = split(bb, 1:nrow(bb) <= i)
-    lapply(abs, getAbstractFontInfo, bold, fontInfo)
+    lapply(abs, getAbstractFontInfo, fun, bold, fontInfo)
 }
 
 getAbstractFontInfo =
-function(bb, bold, fontInfo)    
+function(bb, fun, bold, fontInfo)    
 {
     bb2 = split(bb, bb$top)
     ll = sapply(bb2, function(x) combineText(x$text[ order(x$left) ]))
     i = grep("Sponsor:", ll)
 
-    list(title = fontByLines(bb2[ 1:(i-2L) ]),
-         studentName = bb2[[ i-1L ]]$font,
-         abstract = fontByLines(bb2[ (i+2L):length(bb2) ]),
-         sponsor =  bb2[[ i ]]$font
-         )
+    fun(title = bb2[ 1:(i-2L) ],
+        student = bb2[[ i-1L ]],
+        sponsor =  bb2[[ i ]],
+        dept = bb2[[ i + 1L ]],
+        abstract = bb2[ (i+2L):length(bb2) ]
+        )
          
 }
+
+procAbstract =
+function(title, student, sponsor, dept, abstract)
+{
+    as.data.frame(
+        lapply(
+            list(title = title,
+                 studentName = student,
+                 sponsor = sponsor,
+                 dept = dept,
+                 abstract = abstract),
+             
+            combineText))
+}
+
+abstractFontInfo =
+function(title, student, sponsor, dept, abstract)    
+{
+    list(title = fontByLines(title),
+         studentName = student$font,
+         abstract = fontByLines(abstract),
+         sponsor =  sponsor$font
+         )    
+}
+
 
 fontByLines =
 function(x)
