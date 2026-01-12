@@ -239,6 +239,9 @@ function(bb, fun, bold, fontInfo)
 getAbstractFontInfo =
 function(bb, fun, bold, fontInfo)    
 {
+    if(length(bb$text[bb$text != " "]) == 0)
+        return(NULL)
+    
     bb2 = split(bb, bb$top)
     ll = sapply(bb2, function(x) combineText(x$text[ order(x$left) ]))
     i = grep("Sponsor:", ll)
