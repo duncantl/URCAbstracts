@@ -173,21 +173,64 @@ function(doc)
     if(is.character(doc))
         doc = readPDFXML(doc, ...)
 
-    as.integer(getNodeSet(doc, "//page[contains(., 'Sponsor: ')]/@number"))
+    i = as.integer(getNodeSet(doc, "//page[contains(., 'Sponsor: ')]/@number"))
+    i[c(diff(i) == 1, TRUE)]
 }
 
-getFontInfo =
-function(doc, pages = doc[abstractPages(doc)])
+getAbsFontInfo =
+function(doc, pages = doc[abstractPages(doc)], docFontInfo = getFontInfo(doc))
 {
     if(is.character(doc))
         doc = readPDFXML(doc, ...)
 
-    bbs = lapply(pages, getBBox2, TRUE, attrs = c("left", "top", "font"))
+    lapply(pages, getPageFontInfo)
+}
+
+getPageFontInfo =
+function(p, fontInfo, bb = getBBox2(p, TRUE, attrs = c("left", "top", "font")), lines = getBBox(p, TRUE))
+{
+    bb = bb[ bb$top < max(lines$y1) , ]
+
+    col = split(bb, bb$left < midPoint(p))
+    fi = fontInfo
+    bold = fi[fi$isBold | grepl("bold", fi$name, ignore.case = TRUE),]    
+    lapply(col, getColFontInfo, bold, fontInfo)
+}
+
     # For each page, 
     # look for title at the top of the two columns
     # Sponsor: to get the font
     # abstract - last several lines of each column
     # department -
-    # student name - line above Sponsor: 
-    sapply(
+    # student name - line above Sponsor:     
+getColFontInfo =
+function(bb, bold, fontInfo)
+{
+    bb = bb[order(bb$top),]
+    d = diff(bb$top)
+    i = which.max(d)
+    abs = split(bb, 1:nrow(bb) <= i)
+    lapply(abs, getAbstractFontInfo, bold, fontInfo)
 }
+
+getAbstractFontInfo =
+function(bb, bold, fontInfo)    
+{
+    bb2 = split(bb, bb$top)
+    ll = sapply(bb2, function(x) combineText(x$text[ order(x$left) ]))
+    i = grep("Sponsor:", ll)
+
+    list(title = fontByLines(bb2[ 1:(i-2L) ]),
+         studentName = bb2[[ i-1L ]]$font,
+         abstract = fontByLines(bb2[ (i+2L):length(bb2) ]),
+         sponsor =  bb2[[ i ]]$font
+         )
+         
+}
+
+fontByLines =
+function(x)
+{
+    unique(sapply(x, function(x) x$font))
+}
+
