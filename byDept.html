@@ -1,0 +1,31 @@
+<html>
+    <head>
+	<style>
+	    body {
+               font-family: Verdana, Georgia, Helvetica, Arial, sans-serif;
+            }
+        </style>	    
+    </head>
+    <body>
+	<h1>UCR Abstracts 2019–2025 (w/o 2022)</h1>
+	<div class="UI">
+	    <select id="dept">
+		<!-- Build this from the data, not statically. -->
+
+	    </select>
+	</div>
+	<div id="abstracts" class="abstracts">
+	</div>
+
+	<script src="abstractsByDepartment.json">        </script>
+	<script src="functions.js">        </script>	
+	<script>
+	 console.log("Adding event handler");
+	 document.getElementById("dept").addEventListener("change", setDepartment);
+
+	 document.getElementById("dept").innerHTML = mkDeptOptions(Object.keys(byDept));
+	</script>
+	
+    </body>
+    
+</html>    
