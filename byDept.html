@@ -3,15 +3,19 @@
 	<style>
 	    body {
                font-family: Verdana, Georgia, Helvetica, Arial, sans-serif;
-            }
+            };
+	 dialog {
+             width: 400px;
+	     max-width: 50%;
+	     }
+	 
         </style>	    
     </head>
     <body>
 	<h1>UCR Abstracts 2019-2025 (w/o 2022)</h1>
 	<div class="UI">
+            <button onclick="window.helpDialog.showModal()">?</button>	    
 	    <select id="dept">
-		<!-- Build this from the data, not statically. -->
-
 	    </select>
 	</div>
 	<div id="abstracts" class="abstracts">
@@ -20,11 +24,18 @@
 	<script src="abstractsByDepartment.json">        </script>
 	<script src="functions.js">        </script>	
 	<script>
-	 console.log("Adding event handler");
 	 document.getElementById("dept").addEventListener("change", setDepartment);
-
 	 document.getElementById("dept").innerHTML = mkDeptOptions(Object.keys(byDept));
 	</script>
+
+	<dialog id="helpDialog">
+	    <p>Use the pull-down menu to select a "department" or mentor/sponsor name to
+		show all the abstracts for that department/sponsor. <br/> The abstracts are displayed
+		by year with the title, sponsor and student name and a hyperlink to the specific
+		page of the PDF with the original abstract. This link helps when the spacing or
+	      mathematical content is not displayed correctly.</p>
+	    <button onclick="window.helpDialog.close()">Close</button>
+	</dialog>
 	
     </body>
     
