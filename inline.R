@@ -20,8 +20,6 @@ inlineScript =
 function(node, content)    
 {
     newXMLTextNode(content, parent = node, cdata = TRUE)
-    a = xmlAttrs(node)
-    a = a[names(a) != "src"]
-    xmlAttrs(node, append = FALSE) = a
+    removeAttributes(node, "src")
     node
 }

@@ -10,7 +10,7 @@ system.time({ v = lapply(docs, \(f) try(combinePages(getAbstracts2(f))))})
 names(v) = xml
 err = sapply(v, inherits, 'try-error')
 # stopifnot(!any(err))
-v[[1]] = combinePages(getAbstracts2(docs[[1]], pages = doc1[52:233]))
+v[[1]] = combinePages(getAbstracts2(docs[[1]], pages = docs[[1]][52:233]))
 
 abs = do.call(rbind, v)
 rownames(abs) = NULL
