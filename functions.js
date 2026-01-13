@@ -79,10 +79,10 @@ function mkAbstract(a)
     return("<div class='abstract'>" +  
            "<h3>" + a.title + "</h3>" +
 	   "<table><tr><th>Mentor/Sponsor</th><th>Student</th><th>Year</th><th>Page</th></tr><tr>" +
-	   "<th>" + a.sponsor + "</th>"  +
-	   "<th>" + a.studentName + "</th>" + 
-	   "<th><a href='" + getPDFURL(a.year, a.pageNum)  + "'>" + a.year + "</a></th>" +
-	   "<th>" + a.pageNum + "</th>"  +
+	   "<td>" + a.sponsor + "</td>"  +
+	   "<td>" + a.studentName + "</td>" + 
+	   "<td><a href='" + getPDFURL(a.year, a.pageNum)  + "'>" + a.year + "</a></td>" +
+	   "<td>" + a.pageNum + "</td>"  +
 	   "</tr></table>" + 
            "<p class='content'>" + a.abstract + "</p>" + 
            "</div>");
