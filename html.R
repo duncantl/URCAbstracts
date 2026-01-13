@@ -10,7 +10,4 @@ function(abs, by, file)
 mkJSON(abs, "dept", "abstractsByDepartment.json")
 mkJSON(abs, "sponsor", "abstractsBySponsor.json")
 
-bySponsor = split(abs, abs$sponsor)
-bySponsor = lapply(bySponsor, function(x) x[order(x$year, decreasing = TRUE),])
-json = jsonlite::toJSON(bySponsor, "rows")
-cat("var byDept = \n", json, file = "abstractsBySponsor.json")
+
