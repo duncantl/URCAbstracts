@@ -1,31 +1,9 @@
-if(FALSE) {
+# See get2.R
 
+if(FALSE) {
     # Takes 9-10 seconds
     f = "2024-abstract-book.xml"
     z = combinePages(getAbstracts2(f))
-
-    # For 2019 PDF/XML, need to read as latin1 rather than UTF8.
-    # Also, calling abstractPages() causes a memory limit error for the XPath.
-    # So specify these manually.
-
-    xml = list.files(pattern = "\\.xml$")
-    docs = lapply(xml, \(f) tryCatch(readPDFXML(f), error = function(...) readPDFXML(f, encoding = "latin1")))
-    system.time({ v = lapply(docs, \(f) try(combinePages(getAbstracts2(f))))})
-    names(v) = xml
-    v[[1]] = combinePages(getAbstracts2(docs[[1]], pages = doc1[52:233]))
-
-    abs = do.call(rbind, v)
-    rownames(abs) = NULL
-    abs$year = rep((2019:2025)[-4], sapply(v, nrow))
-
-    mp = c("Microbiology & Molec Gene" = "Microbiology & Molec Genetics",
-      "Molecular & Cellular Bio" = "Molecular & Cellular Biology",
-      "Land, Air and Water Resources" = "Land Air & Water Resources")
-    for(i in names(mp))
-        abs$dept[abs$dept == i] = mp[i]
-
-    # Check changed.
-    table(abs$dept %in% names(mp))
 }
 
 
@@ -196,8 +174,12 @@ function(bb)
     if(is.list(bb) && !is.data.frame(bb))
         bb = do.call(rbind, bb)
     
-    if(is.data.frame(bb))
-        bb = bb$text
+    if(is.data.frame(bb)) {
+        g = split(bb, bb$top)
+        bb = unlist(sapply(g, function(x) paste(c(" ", x$text[order(x$left)]))))
+        # bb = bb$text
+    }
+    
 
     normalizeSpace( paste(bb, collapse = "") )
 }
@@ -250,7 +232,7 @@ function(bb, lines)
 }
 
 getPageFontInfo =
-function(p, fontInfo, fun = procAbstract, bb = getBBox2(p, TRUE, attrs = c("left", "top", "font")), lines = getBBox(p, TRUE))
+function(p, fontInfo = NULL, fun = procAbstract, bb = getBBox2(p, TRUE, attrs = c("left", "top", "font")), lines = getBBox(p, TRUE))
 {
     bb = rmFooter(bb, lines)
 
@@ -285,11 +267,14 @@ function(bb, fun, bold, fontInfo, row = NA, column = NA, page = NA)
 {
     if(length(bb$text[bb$text != " "]) == 0)
         return(NULL)
+
+    bb = bb[ trimws(bb$text) != "", ]
     
     bb2 = split(bb, bb$top)
     ll = sapply(bb2, function(x) combineText(x$text[ order(x$left) ]))
     i = grep("Sponsor:", ll)
-
+#    if(nrow(bb2[[ i - 1L ]]) == 1 && nam
+#if(column == 2 && row == 2) browser()
     fun(title = bb2[ 1:(i-2L) ],
         student = bb2[[ i-1L ]],
         sponsor =  bb2[[ i ]],
@@ -318,7 +303,7 @@ function(title, student, sponsor, dept, abstract, row = NA, column = NA, page = 
 }
 
 abstractFontInfo =
-function(title, student, sponsor, dept, abstract)    
+function(title, student, sponsor, dept, abstract, ...)    
 {
     list(title = fontByLines(title),
          studentName = student$font,
