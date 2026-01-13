@@ -10,3 +10,4 @@ source("html.R")
 
 inline("byDept.html", "abstractsByDept.html")
 
+inline("byDept.html", "abstractsBySponsor.html", map = c("abstractsByDepartment.json" = "abstractsBySponsor.json"))
