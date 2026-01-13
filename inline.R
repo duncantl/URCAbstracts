@@ -1,11 +1,17 @@
 inline =
-function(doc, out = character())
+function(doc, out = character(), map = character())
 {
     if(is.character(doc))
         doc = htmlParse(doc, encoding = "UTF8")
 
     sc = getNodeSet(doc, "//script[@src]")
     ff = sapply(sc, xmlGetAttr, "src")
+
+    if(length(map)) {
+        w = ff %in% names(map)
+        ff[w] = map[ff[w]]
+    }
+    
     content = sapply(ff, function(x) paste(readLines(x, warn = FALSE), collapse = "\n"))
     
     mapply(inlineScript, sc, content)
