@@ -23,20 +23,52 @@ function mkDeptOptions(vals)
 {
     var h = "";
     vals.forEach(function(item, index) {
-	h = h + "<option value='" + item + "'>" + item + "</option>"
+	h += "<option value='" + item + "'>" + item + " (" + byDept[item].length + ")</option>";
     });
     return(h);
 }
 
+var CountsByYear = {};
 function showAbstracts(a)
 {
     var div = document.getElementById("abstracts");
     div.innerHTML = "";
-    var h = "";
+    var curYear = a[0].year;
+    var years = [ curYear];
+    var ctr = 0;
+    CountsByYear = {};
+    
+    var h = "<h3 id='" + curYear + "'>" + curYear + "</h3>";
+    
     a.forEach(function(item, index) {
+	if(item.year != curYear) {
+	    CountsByYear[ curYear + "" ] = ctr;
+	    ctr = 0;
+	    curYear = item.year;
+	    years.push(curYear);
+	    h = h + "<hr width=50% /> <h1 id='" + curYear + "'>" + curYear + "</h1>";
+	}
+
+	ctr++;
+	
         h = h + mkAbstract(item);
     });
-    div.innerHTML = h;
+
+    CountsByYear[ curYear + "" ] = ctr;
+
+    console.log(CountsByYear);
+    
+    div.innerHTML = mkYearLinks(years) + h;
+}
+
+function mkYearLinks(years)
+{
+    var txt = "<p>";
+    years.forEach(function(item, index) {    
+	txt += "<a href=#" + item + ">" + item + "</a> (" +  CountsByYear[ item + "" ] + ")&nbsp;";
+    });
+    txt += "</p>"
+    return(txt);
 }
 
 function mkAbstract(a)
@@ -45,17 +77,27 @@ function mkAbstract(a)
     //  title,studentName,sponsor,dept,abstract,row,column,pageNum,year
 
     return("<div class='abstract'>" +  
-            "<h3>" + a.title + "</h3>" +
-	   "<table><tr><th>Student</th><th>Mentor/Sponsor</th><th>Year</th><th>Page</th></tr><tr>" +
-	   "<th>" + a.studentName + "</th>" + 
+           "<h3>" + a.title + "</h3>" +
+	   "<table><tr><th>Mentor/Sponsor</th><th>Student</th><th>Year</th><th>Page</th></tr><tr>" +
 	   "<th>" + a.sponsor + "</th>"  +
-	   "<th>" + a.year + "</th>" +
+	   "<th>" + a.studentName + "</th>" + 
+	   "<th><a href='" + getPDFURL(a.year, a.pageNum)  + "'>" + a.year + "</a></th>" +
 	   "<th>" + a.pageNum + "</th>"  +
 	   "</tr></table>" + 
-//	   "<h5> Student: " + a.studentName + "</h5>" + 
-//	   "<h5> Sponsor: " + a.sponsor + "</h5>"  +
-//	    "<h6> " + a.year + " page " + a.pageNum + "</h6>"  +	   
-            "<p class='content'>" + a.abstract + "</p>" + 
-            "</div>");
+           "<p class='content'>" + a.abstract + "</p>" + 
+           "</div>");
 
+}
+
+var PDFURLs = {"2019": "https://urc.ucdavis.edu/sites/g/files/dgvnsk3561/files/inline-files/2019%20URC%20Abstract%20Book%20V.4%5B1%5D.pdf",
+	       "2020": "https://urc.ucdavis.edu/sites/g/files/dgvnsk3561/files/inline-files/2020%20URC%20Abstract%20Book%20V.3%20%28WEB%29_0.pdf",
+	       "2021": "https://urc.ucdavis.edu/sites/g/files/dgvnsk3561/files/inline-files/2021%20URC%20CONF%20Abstract%20FINAL.pdf",
+	       "2023": "https://urc.ucdavis.edu/sites/g/files/dgvnsk3561/files/inline-files/2023%20URC%20Abstract%20Book%20V.3_0_0.pdf",
+	       "2024": "https://urc.ucdavis.edu/sites/g/files/dgvnsk3561/files/media/documents/2024-abstract-book.pdf",
+	       "2025": "https://urc.ucdavis.edu/sites/g/files/dgvnsk3561/files/media/documents/25_URC_Abstract_Book_V2.pdf"
+	      };
+
+function getPDFURL(year, page)
+{
+    return(PDFURLs[ year + "" ] + "#page=" + page);
 }
